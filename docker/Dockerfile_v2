@@ -1,11 +1,11 @@
-FROM golang:1.22-alpine
+    FROM golang:1.22-alpine
 
-COPY . /src
+    COPY . /src
 
-WORKDIR /src
+    WORKDIR /src
 
-EXPOSE 8080
+    EXPOSE 8080
 
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o http_server main.go
+    RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o http_server main.go
 
-CMD [ "/src/http_server" ]
+    CMD [ "/src/http_server" ]

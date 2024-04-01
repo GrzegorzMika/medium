@@ -5,17 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
-	"time"
 
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
-
-type dbNotification struct {
-	Timestamp   time.Time `json:"timestamp"`
-	SignalName  string    `json:"signal_name"`
-	SignalValue float64   `json:"signal_value"`
-}
 
 type callback func(dbNotification)
 
@@ -34,6 +27,7 @@ func NewListener(pool *pgxpool.Pool, callbacks ...callback) *Listener {
 }
 
 func (l *Listener) Start(ctx context.Context) error {
+	slog.Info("Starting listener")
 	conn, err := l.aquireConnection(ctx)
 	if err != nil {
 		return err

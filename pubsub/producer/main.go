@@ -3,7 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
+	"log/slog"
 	"math/rand"
 	"net/http"
 	"os"
@@ -12,7 +12,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-const defaultReadHeaderTimeoutSeconds = 10
+const defaultReadHeaderTimeoutSeconds = 10 * time.Second
 
 func main() {
 	ctx, cancel := context.WithCancel(context.Background())
@@ -20,13 +20,14 @@ func main() {
 
 	db, err := connectDB(ctx)
 	if err != nil {
-		log.Panicln(err)
+		slog.With("error", err).Error("error connecting to database")
+		return
 	}
 	defer db.Close()
 
 	mux := http.NewServeMux()
 
-	mux.HandleFunc("GET /ingest", createIngestHandler(ctx, db))
+	mux.HandleFunc("POST /ingest", createIngestHandler(ctx, db))
 
 	server := &http.Server{
 		Addr:              ":8080",
@@ -34,7 +35,11 @@ func main() {
 		ReadHeaderTimeout: defaultReadHeaderTimeoutSeconds,
 	}
 
-	log.Panic(server.ListenAndServe())
+	slog.Info("Start ingesting data")
+	err = server.ListenAndServe()
+	if err != nil {
+		panic(err)
+	}
 }
 
 func connectDB(ctx context.Context) (*pgxpool.Pool, error) {
@@ -51,14 +56,15 @@ func connectDB(ctx context.Context) (*pgxpool.Pool, error) {
 func createIngestHandler(ctx context.Context, pool *pgxpool.Pool) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		signalName, signalValue := generateTestData()
-		_, err := pool.Exec(ctx, "INSERT INTO signals (time, name, value) VALUES ($1, $2, $3)", time.Now().Format(time.RFC3339), signalName, signalValue)
+		slog.With("signal name", signalName).With("signal value", signalValue).Info("Insertng data into database")
+		_, err := pool.Exec(ctx, "INSERT INTO signals (timestamp, signal_name, signal_value) VALUES ($1, $2, $3)", time.Now().Format(time.RFC3339), signalName, signalValue)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			_, _ = w.Write([]byte(fmt.Sprintf("Failed to insert signal: %s", err)))
 			return
 		}
 		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte(fmt.Sprintf("Inserted signal: %s", signalName)))
+		_, _ = w.Write([]byte(fmt.Sprintf("Inserted signal %s with value %f", signalName, signalValue)))
 	}
 }
 

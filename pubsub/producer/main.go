@@ -56,7 +56,7 @@ func connectDB(ctx context.Context) (*pgxpool.Pool, error) {
 func createIngestHandler(ctx context.Context, pool *pgxpool.Pool) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		signalName, signalValue := generateTestData()
-		slog.With("signal name", signalName).With("signal value", signalValue).Info("Insertng data into database")
+		slog.With("signal name", signalName).With("signal value", signalValue).Info("Inserting data into database")
 		_, err := pool.Exec(ctx, "INSERT INTO signals (timestamp, signal_name, signal_value) VALUES ($1, $2, $3)", time.Now().Format(time.RFC3339), signalName, signalValue)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)

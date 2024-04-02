@@ -28,17 +28,22 @@ func NewListener(pool *pgxpool.Pool, callbacks ...callback) *Listener {
 
 func (l *Listener) Start(ctx context.Context) error {
 	slog.Info("Starting listener")
-	conn, err := l.aquireConnection(ctx)
+
+	// acquire a connection from the pool
+	conn, err := l.pool.Acquire(ctx)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to acquire connection from pool: %w", err)
 	}
+	// defer release the connection back to the pool
 	defer conn.Release()
 
-	conn, err = l.listen(ctx, conn)
+	// let database know we're ready to receive notifications
+	_, err = conn.Exec(ctx, fmt.Sprintf("LISTEN %s", l.channelName))
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to listen to channel: %w", err)
 	}
 
+	// wait for notifications and process them
 	for {
 		notification, err := conn.Conn().WaitForNotification(ctx)
 		if err != nil {
@@ -47,22 +52,6 @@ func (l *Listener) Start(ctx context.Context) error {
 		l.handleNotifications(notification)
 	}
 
-}
-
-func (l *Listener) aquireConnection(ctx context.Context) (*pgxpool.Conn, error) {
-	conn, err := l.pool.Acquire(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("failed to acquire connection from pool: %w", err)
-	}
-	return conn, nil
-}
-
-func (l *Listener) listen(ctx context.Context, conn *pgxpool.Conn) (*pgxpool.Conn, error) {
-	_, err := conn.Exec(ctx, fmt.Sprintf("LISTEN %s", l.channelName))
-	if err != nil {
-		return nil, fmt.Errorf("failed to listen to channel: %w", err)
-	}
-	return conn, nil
 }
 
 func (d *Listener) handleNotifications(notification *pgconn.Notification) {

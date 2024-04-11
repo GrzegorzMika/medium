@@ -24,10 +24,8 @@ class Listener:
         return self
 
     def start(self) -> None:
-        cursor = self.connection.cursor()
-        cursor.execute(f"LISTEN {self.channel_name};")
+        self.connection.execute(f"LISTEN {self.channel_name};")
         self.connection.commit()
-        cursor.close()
         notifications = self.connection.notifies()
         for notification in notifications:
             payload = Payload.model_validate_json(notification.payload)

@@ -6,7 +6,7 @@ import (
 	"sync"
 )
 
-var ModelNotFoundError = errors.New("no model found for a given key")
+var ModelNotFoundErr = errors.New("no model found for a given key")
 
 type InMemoryStore struct {
 	models map[string]*Model
@@ -27,7 +27,7 @@ func (store *InMemoryStore) Get(key string) (*Model, error) {
 	slog.With("key", key).Info("Checking if model exists in store")
 	model, ok := store.models[key]
 	if !ok {
-		return nil, ModelNotFoundError
+		return nil, ModelNotFoundErr
 	}
 	return model, nil
 }

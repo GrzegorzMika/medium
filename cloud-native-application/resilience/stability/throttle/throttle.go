@@ -32,6 +32,9 @@ func Throttle(
 		if parentCtx.Err() != nil {
 			return nil, parentCtx.Err()
 		}
+		if ctx.Err() != nil {
+			return nil, ctx.Err()
+		}
 		once.Do(func() {
 			ticker := time.NewTicker(refillFrequency)
 			go func() {

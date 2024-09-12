@@ -15,6 +15,7 @@ const (
 type Effector func(context.Context, DataProvider) ([]Results, error)
 
 func Retry(effector Effector) Effector {
+	r := rand.New(rand.NewPCG(uint64(time.Now().UnixNano()), uint64(time.Now().UnixNano())))
 	return func(ctx context.Context, provider DataProvider) ([]Results, error) {
 		if ctx.Err() != nil {
 			return nil, ctx.Err()
@@ -22,7 +23,7 @@ func Retry(effector Effector) Effector {
 		results, err := effector(ctx, provider)
 		for backoff := base; err != nil && backoff <= cap; backoff <<= 1 {
 			log.Println("waiting", backoff, "seconds")
-			jitter := rand.Int64N((int64(backoff)))
+			jitter := r.Int64N((int64(backoff)))
 			time.Sleep(base + time.Duration(jitter))
 			results, err = effector(ctx, provider)
 		}

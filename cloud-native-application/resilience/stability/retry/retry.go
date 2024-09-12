@@ -22,9 +22,9 @@ func Retry(effector Effector) Effector {
 		}
 		results, err := effector(ctx, provider)
 		for backoff := base; err != nil && backoff <= cap; backoff <<= 1 {
-			log.Println("waiting", backoff, "seconds")
-			jitter := r.Int64N((int64(backoff)))
-			time.Sleep(base + time.Duration(jitter))
+			delay := base + time.Duration(r.Int64N((int64(backoff))))
+			log.Println("waiting", delay, "seconds")
+			time.Sleep(delay)
 			results, err = effector(ctx, provider)
 		}
 		return results, err
